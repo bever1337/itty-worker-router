@@ -104,15 +104,14 @@ it('allows loading advanced routes after config', async () => {
   })
 
   describe('.handle({ method = \'GET\', url })', () => {
-    it('always returns a value on match', () => {
+    it('always returns a Promise', () => {
       const syncRouter = Router()
       syncRouter.get('/foo', () => 3)
 
       const response = syncRouter.handle(buildRequest({ path: '/foo' }))
-      const response2 = syncRouter.handle(buildRequest({ path: '/bar' }))
 
-      expect(response).toBe(3)
-      expect(response2).toBe(undefined)
+      expect(typeof response?.then).toBe('function')
+      expect(typeof response?.catch).toBe('function')
     })
 
     it('returns { path, query } from match', async () => {
@@ -268,33 +267,33 @@ it('allows loading advanced routes after config', async () => {
       const handler2 = jest.fn(() => { throw new Error() })
       const handler3 = jest.fn(() => {})
       router.get('/foo', handler1, handler2, handler3)
-      try {
-        router
-          .handle(buildRequest({ path: '/foo' }))
-      } catch (_error) {
-        //
-      } finally {
-        expect(handler1).toHaveBeenCalled()
-        expect(handler2).toHaveBeenCalled()
-        expect(handler3).not.toHaveBeenCalled()
-      }
+
+      const escape = err => err
+
+      await router
+        .handle(buildRequest({ path: '/foo' }))
+        .catch(escape)
+
+      expect(handler1).toHaveBeenCalled()
+      expect(handler2).toHaveBeenCalled()
+      expect(handler3).not.toHaveBeenCalled()
     })
 
-    // it('can throw an error and still handle if using catch', async () => {
-    //   const router = Router()
-    //   const handlerWithError = jest.fn(() => { throw new Error(ERROR_MESSAGE) })
-    //   const errorHandler = jest.fn(err => err.message)
+    it('can throw an error and still handle if using catch', async () => {
+      const router = Router()
+      const handlerWithError = jest.fn(() => { throw new Error(ERROR_MESSAGE) })
+      const errorHandler = jest.fn(err => err.message)
 
-    //   router.get('/foo', handlerWithError)
+      router.get('/foo', handlerWithError)
 
-    //   await router
-    //     .handle(buildRequest({ path: '/foo' }))
-    //     .catch(errorHandler)
+      await router
+        .handle(buildRequest({ path: '/foo' }))
+        .catch(errorHandler)
 
-    //   expect(handlerWithError).toHaveBeenCalled()
-    //   expect(errorHandler).toHaveBeenCalled()
-    //   expect(errorHandler).toHaveReturnedWith(ERROR_MESSAGE)
-    // })
+      expect(handlerWithError).toHaveBeenCalled()
+      expect(errorHandler).toHaveBeenCalled()
+      expect(errorHandler).toHaveReturnedWith(ERROR_MESSAGE)
+    })
 
     it('can throw method not allowed error', async () => {
       const router = Router()
@@ -338,28 +337,28 @@ it('allows loading advanced routes after config', async () => {
       expect(await response.json()).toEqual({ foo: 'bar' })
     })
 
-    // it('can easily create a ThrowableRouter', async () => {
-    //   const error = (status, message) => new Response(message, { status })
-    //   const errorResponse = err => error(err.status || 500, err.message)
+    it('can easily create a ThrowableRouter', async () => {
+      const error = (status, message) => new Response(message, { status })
+      const errorResponse = err => error(err.status || 500, err.message)
 
-    //   const ThrowableRouter = options => new Proxy(Router(options), {
-    //     get: (obj, prop) => (...args) =>
-    //         prop === 'handle'
-    //         ? obj[prop](...args).catch(err => error(err.status || 500, err.message))
-    //         : obj[prop](...args)
-    //   })
+      const ThrowableRouter = options => new Proxy(Router(options), {
+        get: (obj, prop) => (...args) =>
+            prop === 'handle'
+            ? obj[prop](...args).catch(err => error(err.status || 500, err.message))
+            : obj[prop](...args)
+      })
 
-    //   const router = ThrowableRouter()
-    //   const handlerWithError = jest.fn(() => { throw new Error(ERROR_MESSAGE) })
+      const router = ThrowableRouter()
+      const handlerWithError = jest.fn(() => { throw new Error(ERROR_MESSAGE) })
 
-    //   router.get('/foo', handlerWithError)
+      router.get('/foo', handlerWithError)
 
-    //   const response = await router.handle(buildRequest({ path: '/foo' }))
+      const response = await router.handle(buildRequest({ path: '/foo' }))
 
-    //   expect(response instanceof Response).toBe(true)
-    //   expect(response.status).toBe(500)
-    //   expect(await response.text()).toBe(ERROR_MESSAGE)
-    // })
+      expect(response instanceof Response).toBe(true)
+      expect(response.status).toBe(500)
+      expect(await response.text()).toBe(ERROR_MESSAGE)
+    })
 
     it('allows chaining', () => {
       const router = Router()
