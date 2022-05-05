@@ -52,8 +52,8 @@ describe('Router', () => {
   })
 
   it('allows preloading advanced routes', async () => {
-    const basicHandler = jest.fn((req) => req.params)
-    const customHandler = jest.fn((req) => req.params)
+    const basicHandler = jest.fn(req => req.params)
+    const customHandler = jest.fn(req => req.params)
 
     const router = Router({
       routes: [
@@ -73,7 +73,7 @@ describe('Router', () => {
   })
 
   it('allows loading advanced routes after config', async () => {
-    const handler = jest.fn((req) => req.params)
+    const handler = jest.fn(req => req.params)
 
     const router = Router()
 
@@ -87,15 +87,15 @@ describe('Router', () => {
   describe('.{method}(route: string, handler1: function, ..., handlerN: function)', () => {
     it('can accept multiple handlers (each mutates request)', async () => {
       const r = Router()
-      const handler1 = jest.fn((req) => {
+      const handler1 = jest.fn(req => {
         req.a = 1
       })
-      const handler2 = jest.fn((req) => {
+      const handler2 = jest.fn(req => {
         req.b = 2
 
         return req
       })
-      const handler3 = jest.fn((req) => ({ c: 3, ...req }))
+      const handler3 = jest.fn(req => ({ c: 3, ...req }))
       r.get('/multi/:id', handler1, handler2, handler3)
 
       await r.handle(buildRequest({ path: '/multi/foo' }))
@@ -117,7 +117,7 @@ describe('Router', () => {
     })
 
     it('returns { path, query } from match', async () => {
-      const route = routes.find((r) => r.path === '/foo/:id')
+      const route = routes.find(r => r.path === '/foo/:id')
       await router.handle(buildRequest({ path: '/foo/13?foo=bar&cat=dog' }))
 
       expect(route.callback).toHaveReturnedWith({
@@ -127,7 +127,7 @@ describe('Router', () => {
     })
 
     it('requires exact route match', async () => {
-      const route = routes.find((r) => r.path === '/')
+      const route = routes.find(r => r.path === '/')
 
       await router.handle(buildRequest({ path: '/foo' }))
 
@@ -151,14 +151,14 @@ describe('Router', () => {
     })
 
     it('honors correct method (e.g. GET, POST, etc)', async () => {
-      const route = routes.find((r) => r.path === '/foo' && r.method === 'post')
+      const route = routes.find(r => r.path === '/foo' && r.method === 'post')
       await router.handle(buildRequest({ method: 'POST', path: '/foo' }))
 
       expect(route.callback).toHaveBeenCalled()
     })
 
     it('passes the entire original request through to the handler', async () => {
-      const route = routes.find((r) => r.path === '/passthrough')
+      const route = routes.find(r => r.path === '/passthrough')
       await router.handle(
         buildRequest({ path: '/passthrough', name: 'miffles' })
       )
@@ -195,11 +195,11 @@ describe('Router', () => {
     it('can match multiple routes if earlier handlers do not return (as middleware)', async () => {
       const r = Router()
 
-      const middleware = (req) => {
+      const middleware = req => {
         req.user = { id: 13 }
       }
 
-      const handler = jest.fn((req) => req.user.id)
+      const handler = jest.fn(req => req.user.id)
 
       r.get('/middleware/*', middleware)
       r.get('/middleware/:id', handler)
@@ -224,7 +224,7 @@ describe('Router', () => {
 
     it('can pull route params from the basepath as well', async () => {
       const router = Router({ base: '/:collection' })
-      const handler = jest.fn((req) => req.params)
+      const handler = jest.fn(req => req.params)
       router.get('/:id', handler)
 
       await router.handle(buildRequest({ path: '/todos/13' }))
@@ -321,7 +321,7 @@ describe('Router', () => {
       router.post('*', middleware, handler).all('*', errorHandler)
 
       // creates a request (with passed method) with JSON body
-      const createRequest = (method) =>
+      const createRequest = method =>
         new Request('https://foo.com/foo', {
           method,
           headers: {
@@ -405,10 +405,10 @@ describe('Router', () => {
 
     it('will pass request.proxy instead of request if found', async () => {
       const router = Router()
-      const handler = jest.fn((req) => req)
+      const handler = jest.fn(req => req)
       let proxy
 
-      const withProxy = (request) => {
+      const withProxy = request => {
         request.proxy = proxy = new Proxy(request, {})
       }
 
@@ -421,12 +421,12 @@ describe('Router', () => {
 
     it('can handle POST body even if not used', async () => {
       const router = Router()
-      const handler = jest.fn((req) => req.json())
+      const handler = jest.fn(req => req.json())
       const errorHandler = jest.fn()
 
       router.post('/foo', handler).all('*', errorHandler)
 
-      const createRequest = (method) =>
+      const createRequest = method =>
         new Request('https://foo.com/foo', {
           method,
           headers: {
